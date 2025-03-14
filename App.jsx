@@ -67,7 +67,7 @@ export default function App() {
       <View style={searchBar.container}>
           <TextInput
               style={searchBar.input}
-              placeholder="Search"
+              placeholder="Cari..."
             />
             <Pressable style={searchBar.button}>
               <SearchNormal size={20} color={colors.white()} />
