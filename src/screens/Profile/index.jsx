@@ -1,5 +1,6 @@
 import {ScrollView, StyleSheet, Text, View, TouchableOpacity} from 'react-native';
-import {Setting2} from 'iconsax-react-native';
+import {Setting2, Edit} from 'iconsax-react-native';
+import {useNavigation} from '@react-navigation/native';
 import React from 'react';
 import FastImage from '@d11/react-native-fast-image';
 import {ProfileData, BlogList} from '../../data';
@@ -20,6 +21,7 @@ const formatNumber = number => {
 };
 const data = BlogList.slice(5);
 const Profile = () => {
+  const navigation = useNavigation();
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -76,6 +78,11 @@ const Profile = () => {
           ))}
         </View>
       </ScrollView>
+      <TouchableOpacity
+        style={styles.floatingButton}
+        onPress={() => navigation.navigate('AddBlog')}>
+        <Edit color={colors.white()} variant="Linear" size={20} />
+      </TouchableOpacity>
     </View>
   );
 };
@@ -100,6 +107,25 @@ const styles = StyleSheet.create({
     fontFamily: fontType['Pjs-ExtraBold'],
     color: colors.black(),
   },
+
+  floatingButton: {
+    backgroundColor: colors.blue(),
+    padding: 15,
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    borderRadius: 10,
+    shadowColor: colors.blue(),
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+
+    elevation: 8,
+  },
+
 });
 const profile = StyleSheet.create({
   pic: {width: 100, height: 100, borderRadius: 15},

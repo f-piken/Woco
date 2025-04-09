@@ -1,36 +1,44 @@
 import {StyleSheet, Text, View, FlatList, TouchableOpacity} from 'react-native';
 import React, {useState} from 'react';
 import {Receipt21} from 'iconsax-react-native';
+import {useNavigation} from '@react-navigation/native';
 import FastImage from '@d11/react-native-fast-image';
-import { fontType, colors } from '../theme';
+import {fontType, colors} from '../theme';
+
 const ItemHorizontal = ({item, variant, onPress}) => {
+  const navigation = useNavigation();
   return (
-    <View style={itemHorizontal.cardItem}>
-      <FastImage
-        style={itemHorizontal.cardImage}
-        source={{
+    <TouchableOpacity style={itemHorizontal.cardItem} onPress={() => navigation.navigate('BlogDetail', {blogId: item.id})}>
+        <FastImage
+          style={itemHorizontal.cardImage}
+          source={{
             uri: item.image,
             headers: {Authorization: 'someAuthToken'},
             priority: FastImage.priority.high,
           }}
           resizeMode={FastImage.resizeMode.cover}>
-        <View style={itemHorizontal.cardContent}>
-          <View style={itemHorizontal.cardInfo}>
-            <Text style={itemHorizontal.cardTitle}>{item.title}</Text>
-            <Text style={itemHorizontal.cardText}>{item.createdAt}</Text>
-          </View>
-          <View>
-            <View style={itemHorizontal.cardIcon}>
-              <TouchableOpacity onPress={onPress}>
-                <Receipt21 color={colors.white()} variant={variant} size={20} />
-              </TouchableOpacity>
+          <View style={itemHorizontal.cardContent}>
+            <View style={itemHorizontal.cardInfo}>
+              <Text style={itemHorizontal.cardTitle}>{item.title}</Text>
+              <Text style={itemHorizontal.cardText}>{item.createdAt}</Text>
+            </View>
+            <View>
+              <View style={itemHorizontal.cardIcon}>
+                <TouchableOpacity onPress={onPress}>
+                  <Receipt21
+                    color={colors.white()}
+                    variant={variant}
+                    size={20}
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </FastImage>
-    </View>
+        </FastImage>
+    </TouchableOpacity>
   );
 };
+
 const ListHorizontal = ({data}) => {
   const [bookmark, setBookmark] = useState([]);
   const toggleBookmark = itemId => {
@@ -41,7 +49,7 @@ const ListHorizontal = ({data}) => {
     }
   };
   const renderItem = ({item}) => {
-    variant = bookmark.includes(item.id) ? 'Bold' : 'Linear';
+    const variant = bookmark.includes(item.id) ? 'Bold' : 'Linear';
     return (
       <ItemHorizontal
         item={item}
