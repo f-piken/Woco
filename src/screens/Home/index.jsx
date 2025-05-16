@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import {ScrollView, StyleSheet,  Text, View, Image, ImageBackground, TextInput, Pressable, TouchableOpacity, FlatList} from 'react-native';
 import {Element3, Receipt21, Clock, Message, SearchNormal, Notification} from 'iconsax-react-native';
-import {fontType, colors} from '../../theme';
-import {ListHorizontal, ItemSmall} from '../../components';
-import {CategoryList, BlogList} from '../../data';
+import { fontType, colors } from '../../theme';
+import { CategoryList, BlogList } from '../../data';
+import { ListHorizontal, ItemSmall } from '../../components';
 
 const ItemCategory = ({item, onPress, color}) => {
   return (
