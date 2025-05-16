@@ -1,183 +1,205 @@
-import {StyleSheet, Text, View, ScrollView, TouchableOpacity} from 'react-native';
-import React, {useState} from 'react';
-import {ArrowLeft, Like1, Receipt21, Message, Share, More} from 'iconsax-react-native';
-import {useNavigation} from '@react-navigation/native';
-import {BlogList} from '../../data';
+import { ScrollView, StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { Edit, Setting2 } from 'iconsax-react-native';
+import React, { useEffect, useState, useCallback } from 'react';
 import FastImage from '@d11/react-native-fast-image';
+import { ProfileData } from '../../data';
+import { ItemSmall } from '../../components';
+import { useNavigation } from '@react-navigation/native';
 import { fontType, colors } from '../../theme';
-const formatNumber = number => {
-  if (number >= 1000000000) {
-    return (number / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
-  }
-  if (number >= 1000000) {
-    return (number / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-  }
-  if (number >= 1000) {
-    return (number / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-  }
-  return number.toString();
-};
-const BlogDetail = ({route}) => {
-  const {blogId} = route.params;
-  const [iconStates, setIconStates] = useState({
-    liked: {variant: 'Linear', color: colors.grey(0.6)},
-    bookmarked: {variant: 'Linear', color: colors.grey(0.6)},
-  });
-  const selectedBlog = BlogList.find(blog => blog.id === blogId);
+import { collection, getFirestore, onSnapshot } from '@react-native-firebase/firestore';
+import { formatNumber } from '../../utils/formatNumber';
+
+const Profile = () => {
   const navigation = useNavigation();
-  const toggleIcon = iconName => {
-    setIconStates(prevStates => ({
-      ...prevStates,
-      [iconName]: {
-        variant: prevStates[iconName].variant === 'Linear' ? 'Bold' : 'Linear',
-        color:
-          prevStates[iconName].variant === 'Linear'
-            ? colors.blue()
-            : colors.grey(0.6),
-      },
-    }));
-  };
+  const [loading, setLoading] = useState(true);
+  const [blogData, setBlogData] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  useEffect(() => {
+    const db = getFirestore();
+    const blogRef = collection(db, 'blog');
+
+    const subscriber = onSnapshot(blogRef, (snapshot) => {
+      const blogs = [];
+      snapshot.forEach((doc) => {
+        blogs.push({
+          ...doc.data(),
+          id: doc.id,
+        });
+      });
+      setBlogData(blogs);
+      setLoading(false);
+    });
+    return () => subscriber();
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => {
+      const db = getFirestore();
+      const blogRef = collection(db, 'blog');
+      onSnapshot(blogRef, (snapshot) => {
+        const blogs = [];
+        snapshot.forEach((doc) => {
+          blogs.push({
+            ...doc.data(),
+            id: doc.id,
+          });
+        });
+        setBlogData(blogs);
+        setLoading(false);
+      });
+
+      setRefreshing(false);
+    }, 1500);
+  }, []);
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <ArrowLeft
-            color={colors.grey(0.6)}
-            variant="Linear"
-            size={24}
-          />
+        <TouchableOpacity>
+          <Setting2 color={colors.black()} variant="Linear" size={24} />
         </TouchableOpacity>
-        <View style={{flexDirection: 'row', justifyContent: 'center', gap: 20}}>
-          <Share color={colors.grey(0.6)} variant="Linear" size={24} />
-          <More
-            color={colors.grey(0.6)}
-            variant="Linear"
-            style={{transform: [{rotate: '90deg'}]}}
-          />
-        </View>
       </View>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingHorizontal: 24,
-          paddingTop: 62,
-          paddingBottom: 54,
-        }}>
-        <FastImage
-          style={styles.image}
-          source={{
-            uri: selectedBlog.image,
-            headers: {Authorization: 'someAuthToken'},
-            priority: FastImage.priority.high,
-          }}
-          resizeMode={FastImage.resizeMode.cover}>
-        </FastImage>
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            marginTop: 15,
-          }}>
-          <Text style={styles.category}>{selectedBlog.category}</Text>
-          <Text style={styles.date}>{selectedBlog.createdAt}</Text>
-        </View>
-        <Text style={styles.title}>{selectedBlog.title}</Text>
-        <Text style={styles.content}>{selectedBlog.content}</Text>
-      </ScrollView>
-      <View style={styles.bottomBar}>
-        <View style={{flexDirection:'row', gap:5, alignItems:'center'}}>
-          <TouchableOpacity onPress={() => toggleIcon('liked')}>
-            <Like1
-              color={iconStates.liked.color}
-              variant={iconStates.liked.variant}
-              size={24}
-            />
-          </TouchableOpacity>
-          <Text style={styles.info}>
-            {formatNumber(selectedBlog.totalLikes)}
-          </Text>
-        </View>
-        <View style={{flexDirection:'row', gap:5, alignItems:'center'}}>
-        <Message color={colors.grey(0.6)} variant="Linear" size={24} />
-        <Text style={styles.info}>
-          {formatNumber(selectedBlog.totalComments)}
-        </Text>
-        </View>
-        <TouchableOpacity onPress={() => toggleIcon('bookmarked')}>
-          <Receipt21
-            color={iconStates.bookmarked.color}
-            variant={iconStates.bookmarked.variant}
-            size={24}
+          gap: 10,
+          paddingVertical: 20,
+        }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }>
+        <View style={{ gap: 15, alignItems: 'center' }}>
+          <FastImage
+            style={profile.pic}
+            source={{
+              uri: ProfileData.profilePict,
+              headers: { Authorization: 'someAuthToken' },
+              priority: FastImage.priority.high,
+            }}
+            resizeMode={FastImage.resizeMode.cover}
           />
-        </TouchableOpacity>
-      </View>
+          <View style={{ gap: 5, alignItems: 'center' }}>
+            <Text style={profile.name}>{ProfileData.name}</Text>
+            <Text style={profile.info}>
+              Member since {ProfileData.createdAt}
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 20 }}>
+            <View style={{ alignItems: 'center', gap: 5 }}>
+              <Text style={profile.sum}>{ProfileData.blogPosted}</Text>
+              <Text style={profile.tag}>Posted</Text>
+            </View>
+            <View style={{ alignItems: 'center', gap: 5 }}>
+              <Text style={profile.sum}>
+                {formatNumber(ProfileData.following)}
+              </Text>
+              <Text style={profile.tag}>Following</Text>
+            </View>
+            <View style={{ alignItems: 'center', gap: 5 }}>
+              <Text style={profile.sum}>
+                {formatNumber(ProfileData.follower)}
+              </Text>
+              <Text style={profile.tag}>Follower</Text>
+            </View>
+          </View>
+          <TouchableOpacity style={profile.buttonEdit}>
+            <Text style={profile.buttonText}>Edit Profile</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={{ paddingVertical: 10, gap: 10 }}>
+          {loading ? (
+            <ActivityIndicator size={'large'} color={colors.blue()} />
+          ) : (
+            blogData.map((item, index) => <ItemSmall item={item} key={index} />)
+          )}
+        </View>
+      </ScrollView>
+      <TouchableOpacity
+        style={styles.floatingButton}
+        onPress={() => navigation.navigate('AddBlog')}>
+        <Edit color={colors.white()} variant="Linear" size={20} />
+      </TouchableOpacity>
     </View>
   );
 };
-export default BlogDetail;
+
+export default Profile;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.white(),
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   header: {
     paddingHorizontal: 24,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     flexDirection: 'row',
     alignItems: 'center',
     height: 52,
+    elevation: 8,
     paddingTop: 8,
     paddingBottom: 4,
-    position: 'absolute',
-    zIndex: 1000,
-    top: 0,
-    right: 0,
-    left: 0,
-    backgroundColor: colors.white(),
-  },
-  bottomBar: {
-    position: 'absolute',
-    zIndex: 1000,
-    backgroundColor: colors.white(),
-    paddingVertical: 14,
-    paddingHorizontal: 60,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  image: {
-    height: 200,
-    width: 'auto',
-    borderRadius: 15,
-  },
-  info: {
-    color: colors.grey(0.6),
-    fontFamily: fontType['Pjs-SemiBold'],
-    fontSize: 12,
-  },
-  category: {
-    color: colors.blue(),
-    fontFamily: fontType['Pjs-SemiBold'],
-    fontSize: 12,
-  },
-  date: {
-    color: colors.grey(0.6),
-    fontFamily: fontType['Pjs-Medium'],
-    fontSize: 10,
   },
   title: {
-    fontSize: 16,
-    fontFamily: fontType['Pjs-Bold'],
+    fontSize: 20,
+    fontFamily: fontType['Pjs-ExtraBold'],
     color: colors.black(),
-    marginTop: 10,
   },
-  content: {
+  floatingButton: {
+    backgroundColor: colors.blue(),
+    padding: 15,
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    borderRadius: 10,
+    shadowColor: colors.blue(),
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+
+    elevation: 8,
+  },
+});
+const profile = StyleSheet.create({
+  pic: { width: 100, height: 100, borderRadius: 15 },
+  name: {
+    color: colors.black(),
+    fontSize: 20,
+    fontFamily: fontType['Pjs-ExtraBold'],
+  },
+  info: {
+    fontSize: 12,
+    fontFamily: fontType['Pjs-Regular'],
     color: colors.grey(),
-    fontFamily: fontType['Pjs-Medium'],
-    fontSize: 10,
-    lineHeight: 20,
-    marginTop: 15,
+  },
+  sum: {
+    fontSize: 16,
+    fontFamily: fontType['Pjs-SemiBold'],
+    color: colors.black(),
+  },
+  tag: {
+    fontSize: 14,
+    fontFamily: fontType['Pjs-Regular'],
+    color: colors.grey(0.5),
+  },
+  buttonEdit: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: colors.grey(0.1),
+    borderRadius: 10,
+  },
+  buttonText: {
+    fontSize: 14,
+    fontFamily: fontType['Pjs-SemiBold'],
+    color: colors.black(),
   },
 });

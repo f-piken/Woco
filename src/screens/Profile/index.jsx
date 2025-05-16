@@ -1,31 +1,63 @@
-import {ScrollView, StyleSheet, Text, View, TouchableOpacity} from 'react-native';
-import {Setting2, Edit} from 'iconsax-react-native';
-import {useNavigation} from '@react-navigation/native';
-import React from 'react';
+import { ScrollView, StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { Edit, Setting2 } from 'iconsax-react-native';
+import React, { useEffect, useState, useCallback } from 'react';
 import FastImage from '@d11/react-native-fast-image';
-import {ProfileData, BlogList} from '../../data';
-import {ItemSmall} from '../../components';
+import { ProfileData } from '../../data';
+import { ItemSmall } from '../../components';
+import { useNavigation } from '@react-navigation/native';
 import { fontType, colors } from '../../theme';
+import { collection, getFirestore, onSnapshot } from '@react-native-firebase/firestore';
+import { formatNumber } from '../../utils/formatNumber';
 
-const formatNumber = number => {
-  if (number >= 1000000000) {
-    return (number / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
-  }
-  if (number >= 1000000) {
-    return (number / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-  }
-  if (number >= 1000) {
-    return (number / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-  }
-  return number.toString();
-};
-const data = BlogList.slice(5);
 const Profile = () => {
   const navigation = useNavigation();
+  const [loading, setLoading] = useState(true);
+  const [blogData, setBlogData] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  useEffect(() => {
+    const db = getFirestore();
+    const blogRef = collection(db, 'blog');
+
+    const subscriber = onSnapshot(blogRef, (snapshot) => {
+      const blogs = [];
+      snapshot.forEach((doc) => {
+        blogs.push({
+          ...doc.data(),
+          id: doc.id,
+        });
+      });
+      setBlogData(blogs);
+      setLoading(false);
+    });
+    return () => subscriber();
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => {
+      const db = getFirestore();
+      const blogRef = collection(db, 'blog');
+      onSnapshot(blogRef, (snapshot) => {
+        const blogs = [];
+        snapshot.forEach((doc) => {
+          blogs.push({
+            ...doc.data(),
+            id: doc.id,
+          });
+        });
+        setBlogData(blogs);
+        setLoading(false);
+      });
+
+      setRefreshing(false);
+    }, 1500);
+  }, []);
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Setting2 color={colors.black()} variant="Linear" size={24} />
+        <TouchableOpacity>
+          <Setting2 color={colors.black()} variant="Linear" size={24} />
+        </TouchableOpacity>
       </View>
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -33,35 +65,38 @@ const Profile = () => {
           paddingHorizontal: 24,
           gap: 10,
           paddingVertical: 20,
-        }}>
-        <View style={{gap: 15, alignItems: 'center'}}>
+        }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }>
+        <View style={{ gap: 15, alignItems: 'center' }}>
           <FastImage
             style={profile.pic}
             source={{
               uri: ProfileData.profilePict,
-              headers: {Authorization: 'someAuthToken'},
+              headers: { Authorization: 'someAuthToken' },
               priority: FastImage.priority.high,
             }}
             resizeMode={FastImage.resizeMode.cover}
           />
-          <View style={{gap: 5, alignItems: 'center'}}>
+          <View style={{ gap: 5, alignItems: 'center' }}>
             <Text style={profile.name}>{ProfileData.name}</Text>
             <Text style={profile.info}>
               Member since {ProfileData.createdAt}
             </Text>
           </View>
-          <View style={{flexDirection: 'row', gap: 20}}>
-            <View style={{alignItems: 'center', gap: 5}}>
+          <View style={{ flexDirection: 'row', gap: 20 }}>
+            <View style={{ alignItems: 'center', gap: 5 }}>
               <Text style={profile.sum}>{ProfileData.blogPosted}</Text>
               <Text style={profile.tag}>Posted</Text>
             </View>
-            <View style={{alignItems: 'center', gap: 5}}>
+            <View style={{ alignItems: 'center', gap: 5 }}>
               <Text style={profile.sum}>
                 {formatNumber(ProfileData.following)}
               </Text>
               <Text style={profile.tag}>Following</Text>
             </View>
-            <View style={{alignItems: 'center', gap: 5}}>
+            <View style={{ alignItems: 'center', gap: 5 }}>
               <Text style={profile.sum}>
                 {formatNumber(ProfileData.follower)}
               </Text>
@@ -72,10 +107,12 @@ const Profile = () => {
             <Text style={profile.buttonText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
-        <View style={{paddingVertical: 10, gap:10}}>
-          {data.map((item, index) => (
-            <ItemSmall item={item} key={index} />
-          ))}
+        <View style={{ paddingVertical: 10, gap: 10 }}>
+          {loading ? (
+            <ActivityIndicator size={'large'} color={colors.blue()} />
+          ) : (
+            blogData.map((item, index) => <ItemSmall item={item} key={index} />)
+          )}
         </View>
       </ScrollView>
       <TouchableOpacity
@@ -86,11 +123,18 @@ const Profile = () => {
     </View>
   );
 };
+
 export default Profile;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.white(),
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   header: {
     paddingHorizontal: 24,
@@ -107,7 +151,6 @@ const styles = StyleSheet.create({
     fontFamily: fontType['Pjs-ExtraBold'],
     color: colors.black(),
   },
-
   floatingButton: {
     backgroundColor: colors.blue(),
     padding: 15,
@@ -125,15 +168,13 @@ const styles = StyleSheet.create({
 
     elevation: 8,
   },
-
 });
 const profile = StyleSheet.create({
-  pic: {width: 100, height: 100, borderRadius: 15},
+  pic: { width: 100, height: 100, borderRadius: 15 },
   name: {
     color: colors.black(),
     fontSize: 20,
-    fontFamily: fontType['Pjs-Bold'],
-    textTransform:'capitalize'
+    fontFamily: fontType['Pjs-ExtraBold'],
   },
   info: {
     fontSize: 12,
